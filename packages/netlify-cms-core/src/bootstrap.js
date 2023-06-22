@@ -1,21 +1,41 @@
 import React from 'react';
 import { render } from 'react-dom';
-import { Provider } from 'react-redux';
-import { Route } from 'react-router-dom';
-import { ConnectedRouter } from 'react-router-redux';
-import history from 'Routing/history';
-import store from 'ReduxStore';
-import { mergeConfig } from 'Actions/config';
-import { getPhrases } from 'Constants/defaultPhrases';
-import { I18n } from 'react-polyglot';
+import { Provider, connect } from 'react-redux';
+import { Route, Router } from 'react-router-dom';
 import { GlobalStyles } from 'netlify-cms-ui-default';
-import { ErrorBoundary } from 'UI';
-import App from 'App/App';
-import 'EditorWidgets';
-import 'coreSrc/mediaLibrary';
+import { I18n } from 'react-polyglot';
+
+import { store } from './redux';
+import { history } from './routing/history';
+import { loadConfig } from './actions/config';
+import { authenticateUser } from './actions/auth';
+import { getPhrases } from './lib/phrases';
+import { selectLocale } from './reducers/config';
+import { ErrorBoundary } from './components/UI';
+import App from './components/App/App';
+import './components/EditorWidgets';
+import './mediaLibrary';
 import 'what-input';
 
 const ROOT_ID = 'nc-root';
+
+function TranslatedApp({ locale, config }) {
+  return (
+    <I18n locale={locale} messages={getPhrases(locale)}>
+      <ErrorBoundary showBackup config={config}>
+        <Router history={history}>
+          <Route component={App} />
+        </Router>
+      </ErrorBoundary>
+    </I18n>
+  );
+}
+
+function mapDispatchToProps(state) {
+  return { locale: selectLocale(state.config), config: state.config };
+}
+
+const ConnectedTranslatedApp = connect(mapDispatchToProps)(TranslatedApp);
 
 function bootstrap(opts = {}) {
   const { config } = opts;
@@ -53,27 +73,25 @@ function bootstrap(opts = {}) {
    * config.yml if it exists, and any portion that produces a conflict will be
    * overwritten.
    */
-  if (config) {
-    store.dispatch(mergeConfig(config));
-  }
+  store.dispatch(
+    loadConfig(config, function onLoad() {
+      store.dispatch(authenticateUser());
+    }),
+  );
 
   /**
    * Create connected root component.
    */
-  const Root = () => (
-    <>
-      <GlobalStyles />
-      <I18n locale={'en'} messages={getPhrases()}>
-        <ErrorBoundary showBackup>
-          <Provider store={store}>
-            <ConnectedRouter history={history}>
-              <Route component={App} />
-            </ConnectedRouter>
-          </Provider>
-        </ErrorBoundary>
-      </I18n>
-    </>
-  );
+  function Root() {
+    return (
+      <>
+        <GlobalStyles />
+        <Provider store={store}>
+          <ConnectedTranslatedApp />
+        </Provider>
+      </>
+    );
+  }
 
   /**
    * Render application root.

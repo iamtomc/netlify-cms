@@ -2,8 +2,9 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { ClassNames } from '@emotion/core';
-import { Map, List } from 'immutable';
-import { ObjectWidgetTopBar, lengths } from 'netlify-cms-ui-default';
+import { List, Map } from 'immutable';
+import { colors, lengths, ObjectWidgetTopBar } from 'netlify-cms-ui-default';
+import { stringTemplate } from 'netlify-cms-lib-widgets';
 
 const styleStrings = {
   nestedObjectControl: `
@@ -13,7 +14,10 @@ const styleStrings = {
     border-top-right-radius: 0;
   `,
   objectWidgetTopBarContainer: `
-    padding: ${lengths.objectWidgetTopBarContainerPadding}
+    padding: ${lengths.objectWidgetTopBarContainerPadding};
+  `,
+  collapsedObjectControl: `
+    display: none;
   `,
 };
 
@@ -29,10 +33,13 @@ export default class ObjectControl extends React.Component {
     classNameWrapper: PropTypes.string.isRequired,
     forList: PropTypes.bool,
     controlRef: PropTypes.func,
-    editorControl: PropTypes.func.isRequired,
+    editorControl: PropTypes.elementType.isRequired,
     resolveWidget: PropTypes.func.isRequired,
     clearFieldErrors: PropTypes.func.isRequired,
     fieldsErrors: ImmutablePropTypes.map.isRequired,
+    hasError: PropTypes.bool,
+    t: PropTypes.func.isRequired,
+    locale: PropTypes.string,
   };
 
   static defaultProps = {
@@ -42,7 +49,7 @@ export default class ObjectControl extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      collapsed: false,
+      collapsed: props.field.get('collapsed', false),
     };
   }
 
@@ -76,6 +83,10 @@ export default class ObjectControl extends React.Component {
       fieldsErrors,
       editorControl: EditorControl,
       controlRef,
+      parentIds,
+      isFieldDuplicate,
+      isFieldHidden,
+      locale,
     } = this.props;
 
     if (field.get('widget') === 'hidden') {
@@ -83,6 +94,9 @@ export default class ObjectControl extends React.Component {
     }
     const fieldName = field.get('name');
     const fieldValue = value && Map.isMap(value) ? value.get(fieldName) : value;
+
+    const isDuplicate = isFieldDuplicate && isFieldDuplicate(field);
+    const isHidden = isFieldHidden && isFieldHidden(field);
 
     return (
       <EditorControl
@@ -96,6 +110,12 @@ export default class ObjectControl extends React.Component {
         onValidate={onValidateObject}
         processControlRef={controlRef && controlRef.bind(this)}
         controlRef={controlRef}
+        parentIds={parentIds}
+        isDisabled={isDuplicate}
+        isHidden={isHidden}
+        isFieldDuplicate={isFieldDuplicate}
+        isFieldHidden={isFieldHidden}
+        locale={locale}
       />
     );
   }
@@ -111,9 +131,16 @@ export default class ObjectControl extends React.Component {
     return this.controlFor(singleField);
   };
 
+  objectLabel = () => {
+    const { value, field } = this.props;
+    const label = field.get('label', field.get('name'));
+    const summary = field.get('summary');
+    return summary ? stringTemplate.compileStringTemplate(summary, null, '', value) : label;
+  };
+
   render() {
-    const { field, forID, classNameWrapper, forList } = this.props;
-    const { collapsed } = this.state;
+    const { field, forID, classNameWrapper, forList, hasError, t } = this.props;
+    const collapsed = forList ? this.props.collapsed : this.state.collapsed;
     const multiFields = field.get('fields');
     const singleField = field.get('field');
 
@@ -133,15 +160,30 @@ export default class ObjectControl extends React.Component {
                     ${styleStrings.nestedObjectControl}
                   `]: forList,
                 },
+                {
+                  [css`
+                    border-color: ${colors.textFieldBorder};
+                  `]: forList ? !hasError : false,
+                },
               )}
             >
               {forList ? null : (
                 <ObjectWidgetTopBar
                   collapsed={collapsed}
                   onCollapseToggle={this.handleCollapseToggle}
+                  heading={collapsed && this.objectLabel()}
+                  t={t}
                 />
               )}
-              {collapsed ? null : this.renderFields(multiFields, singleField)}
+              <div
+                className={cx({
+                  [css`
+                    ${styleStrings.collapsedObjectControl}
+                  `]: collapsed,
+                })}
+              >
+                {this.renderFields(multiFields, singleField)}
+              </div>
             </div>
           )}
         </ClassNames>

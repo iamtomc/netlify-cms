@@ -2,8 +2,9 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
 import { css, keyframes } from '@emotion/core';
-import CSSTransition from 'react-transition-group/CSSTransition';
-import { colors } from './styles';
+import { CSSTransition } from 'react-transition-group';
+
+import { colors, zIndex } from './styles';
 
 const styles = {
   disabled: css`
@@ -94,7 +95,7 @@ export class Loader extends React.Component {
       return (
         <LoaderText>
           <CSSTransition
-            classNames={{
+            className={{
               enter: styles.enter,
               enterActive: styles.enterActive,
               exit: styles.exit,
@@ -120,9 +121,9 @@ const StyledLoader = styled(Loader)`
   position: absolute;
   top: 50%;
   left: 50%;
-  margin: 0px;
+  margin: 0;
   text-align: center;
-  z-index: 1000;
+  z-index: ${zIndex.zIndex1000};
   transform: translateX(-50%) translateY(-50%);
 
   &:before,
@@ -131,9 +132,9 @@ const StyledLoader = styled(Loader)`
     position: absolute;
     top: 0%;
     left: 50%;
-    width: 2.28571429rem;
-    height: 2.28571429rem;
-    margin: 0em 0em 0em -1.14285714rem;
+    width: 2.2857rem;
+    height: 2.2857rem;
+    margin: 0 0 0 -1.1429rem;
     border-radius: 500rem;
     border-style: solid;
     border-width: 0.2em;
@@ -149,7 +150,7 @@ const StyledLoader = styled(Loader)`
     animation: ${animations.loader} 0.6s linear;
     animation-iteration-count: infinite;
     border-color: ${colors.active} transparent transparent;
-    box-shadow: 0px 0px 0px 1px transparent;
+    box-shadow: 0 0 0 1px transparent;
   }
 `;
 

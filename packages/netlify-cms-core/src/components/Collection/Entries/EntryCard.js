@@ -1,23 +1,27 @@
 import React from 'react';
 import styled from '@emotion/styled';
+import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { resolvePath } from 'netlify-cms-lib-util';
-import { colors, colorsRaw, components, lengths } from 'netlify-cms-ui-default';
-import { VIEW_STYLE_LIST, VIEW_STYLE_GRID } from 'Constants/collectionViews';
-import { compileStringTemplate, parseDateFromEntry } from 'Lib/stringTemplate';
-import { selectIdentifier } from 'Reducers/collections';
+import { colors, colorsRaw, components, lengths, zIndex } from 'netlify-cms-ui-default';
+
+import { boundGetAsset } from '../../../actions/media';
+import { VIEW_STYLE_LIST, VIEW_STYLE_GRID } from '../../../constants/collectionViews';
+import { selectIsLoadingAsset } from '../../../reducers/medias';
+import { selectEntryCollectionTitle } from '../../../reducers/collections';
 
 const ListCard = styled.li`
   ${components.card};
   width: ${lengths.topCardWidth};
   margin-left: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
+  overflow: hidden;
 `;
 
 const ListCardLink = styled(Link)`
   display: block;
   max-width: 100%;
   padding: 16px 22px;
+
   &:hover {
     background-color: ${colors.foreground};
   }
@@ -34,6 +38,9 @@ const GridCard = styled.li`
 
 const GridCardLink = styled(Link)`
   display: block;
+  height: 100%;
+  outline-offset: -2px;
+
   &,
   &:hover {
     background-color: ${colors.foreground};
@@ -65,7 +72,7 @@ const CardBody = styled.div`
     content: '';
     position: absolute;
     display: block;
-    z-index: 1;
+    z-index: ${zIndex.zIndex1};
     bottom: 0;
     left: -20%;
     height: 140%;
@@ -75,44 +82,28 @@ const CardBody = styled.div`
 `;
 
 const CardImage = styled.div`
-  background-image: url(${props => props.url});
+  background-image: url(${props => props.src});
   background-position: center center;
   background-size: cover;
   background-repeat: no-repeat;
   height: 150px;
 `;
 
-const EntryCard = ({
-  collection,
-  entry,
-  inferedFields,
-  publicFolder,
+function EntryCard({
+  path,
+  summary,
+  image,
+  imageField,
   collectionLabel,
   viewStyle = VIEW_STYLE_LIST,
-}) => {
-  const label = entry.get('label');
-  const entryData = entry.get('data');
-  const defaultTitle = label || entryData.get(inferedFields.titleField);
-  const path = `/collections/${collection.get('name')}/entries/${entry.get('slug')}`;
-  const summary = collection.get('summary');
-  const date = parseDateFromEntry(entry, collection) || null;
-  const identifier = entryData.get(selectIdentifier(collection));
-  const title = summary
-    ? compileStringTemplate(summary, date, identifier, entryData)
-    : defaultTitle;
-
-  let image = entryData.get(inferedFields.imageField);
-  image = resolvePath(image, publicFolder);
-  if (image) {
-    image = encodeURI(image);
-  }
-
+  getAsset,
+}) {
   if (viewStyle === VIEW_STYLE_LIST) {
     return (
       <ListCard>
         <ListCardLink to={path}>
           {collectionLabel ? <CollectionLabel>{collectionLabel}</CollectionLabel> : null}
-          <ListCardTitle>{title}</ListCardTitle>
+          <ListCardTitle>{summary}</ListCardTitle>
         </ListCardLink>
       </ListCard>
     );
@@ -124,13 +115,53 @@ const EntryCard = ({
         <GridCardLink to={path}>
           <CardBody hasImage={image}>
             {collectionLabel ? <CollectionLabel>{collectionLabel}</CollectionLabel> : null}
-            <CardHeading>{title}</CardHeading>
+            <CardHeading>{summary}</CardHeading>
           </CardBody>
-          {image ? <CardImage url={image} /> : null}
+          {image ? <CardImage src={getAsset(image, imageField).toString()} /> : null}
         </GridCardLink>
       </GridCard>
     );
   }
-};
+}
 
-export default EntryCard;
+function mapStateToProps(state, ownProps) {
+  const { entry, inferedFields, collection } = ownProps;
+  const entryData = entry.get('data');
+  const summary = selectEntryCollectionTitle(collection, entry);
+
+  let image = entryData.get(inferedFields.imageField);
+  if (image) {
+    image = encodeURI(image);
+  }
+
+  const isLoadingAsset = selectIsLoadingAsset(state.medias);
+
+  return {
+    summary,
+    path: `/collections/${collection.get('name')}/entries/${entry.get('slug')}`,
+    image,
+    imageFolder: collection
+      .get('fields')
+      ?.find(f => f.get('name') === inferedFields.imageField && f.get('widget') === 'image'),
+    isLoadingAsset,
+  };
+}
+
+function mapDispatchToProps(dispatch) {
+  return {
+    boundGetAsset: (collection, entry) => boundGetAsset(dispatch, collection, entry),
+  };
+}
+
+function mergeProps(stateProps, dispatchProps, ownProps) {
+  return {
+    ...stateProps,
+    ...dispatchProps,
+    ...ownProps,
+    getAsset: dispatchProps.boundGetAsset(ownProps.collection, ownProps.entry),
+  };
+}
+
+const ConnectedEntryCard = connect(mapStateToProps, mapDispatchToProps, mergeProps)(EntryCard);
+
+export default ConnectedEntryCard;

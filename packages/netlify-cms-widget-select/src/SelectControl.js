@@ -5,6 +5,7 @@ import { Map, List, fromJS } from 'immutable';
 import { find } from 'lodash';
 import Select from 'react-select';
 import { reactSelectStyles } from 'netlify-cms-ui-default';
+import { validations } from 'netlify-cms-lib-widgets';
 
 function optionToString(option) {
   return option && option.value ? option.value : null;
@@ -55,30 +56,59 @@ export default class SelectControl extends React.Component {
     }),
   };
 
+  isValid = () => {
+    const { field, value, t } = this.props;
+    const min = field.get('min');
+    const max = field.get('max');
+
+    if (!field.get('multiple')) {
+      return { error: false };
+    }
+
+    const error = validations.validateMinMax(
+      t,
+      field.get('label', field.get('name')),
+      value,
+      min,
+      max,
+    );
+
+    return error ? { error } : { error: false };
+  };
+
   handleChange = selectedOption => {
     const { onChange, field } = this.props;
     const isMultiple = field.get('multiple', false);
+    const isEmpty = isMultiple ? !selectedOption?.length : !selectedOption;
 
-    if (Array.isArray(selectedOption)) {
-      if (!isMultiple && selectedOption.length === 0) {
-        onChange(null);
-      } else {
-        onChange(fromJS(selectedOption.map(optionToString)));
-      }
+    if (field.get('required') && isEmpty && isMultiple) {
+      onChange(List());
+    } else if (isEmpty) {
+      onChange(null);
+    } else if (isMultiple) {
+      const options = selectedOption.map(optionToString);
+      onChange(fromJS(options));
     } else {
       onChange(optionToString(selectedOption));
     }
   };
+
+  componentDidMount() {
+    const { field, onChange, value } = this.props;
+    if (field.get('required') && field.get('multiple')) {
+      if (value && !List.isList(value)) {
+        onChange(fromJS([value]));
+      } else if (!value) {
+        onChange(fromJS([]));
+      }
+    }
+  }
 
   render() {
     const { field, value, forID, classNameWrapper, setActiveStyle, setInactiveStyle } = this.props;
     const fieldOptions = field.get('options');
     const isMultiple = field.get('multiple', false);
     const isClearable = !field.get('required', true) || isMultiple;
-
-    if (!fieldOptions) {
-      return <div>Error rendering select control for {field.get('name')}: No options</div>;
-    }
 
     const options = [...fieldOptions.map(convertToOption)];
     const selectedValue = getSelectedValue({

@@ -3,12 +3,21 @@ import React from 'react';
 import styled from '@emotion/styled';
 import { List, Map } from 'immutable';
 import ImmutablePropTypes from 'react-immutable-proptypes';
-import Frame from 'react-frame-component';
+import Frame, { FrameContextConsumer } from 'react-frame-component';
 import { lengths } from 'netlify-cms-ui-default';
-import { resolveWidget, getPreviewTemplate, getPreviewStyles } from 'Lib/registry';
-import { ErrorBoundary } from 'UI';
-import { selectTemplateName, selectInferedField } from 'Reducers/collections';
-import { INFERABLE_FIELDS } from 'Constants/fieldInference';
+import { connect } from 'react-redux';
+
+import {
+  resolveWidget,
+  getPreviewTemplate,
+  getPreviewStyles,
+  getRemarkPlugins,
+} from '../../../lib/registry';
+import { ErrorBoundary } from '../../UI';
+import { selectTemplateName, selectInferedField, selectField } from '../../../reducers/collections';
+import { boundGetAsset } from '../../../actions/media';
+import { selectIsLoadingAsset } from '../../../reducers/medias';
+import { INFERABLE_FIELDS } from '../../../constants/fieldInference';
 import EditorPreviewContent from './EditorPreviewContent.js';
 import PreviewHOC from './PreviewHOC';
 import EditorPreview from './EditorPreview';
@@ -21,11 +30,12 @@ const PreviewPaneFrame = styled(Frame)`
   border-radius: ${lengths.borderRadius};
 `;
 
-export default class PreviewPane extends React.Component {
+export class PreviewPane extends React.Component {
   getWidget = (field, value, metadata, props, idx = null) => {
     const { getAsset, entry } = props;
     const widget = resolveWidget(field.get('widget'));
     const key = idx ? field.get('name') + '_' + idx : field.get('name');
+    const valueIsInMap = value && !widget.allowMapValue && Map.isMap(value);
 
     /**
      * Use an HOC to provide conditional updates for all previews.
@@ -36,9 +46,11 @@ export default class PreviewPane extends React.Component {
         key={key}
         field={field}
         getAsset={getAsset}
-        value={value && Map.isMap(value) ? value.get(field.get('name')) : value}
+        value={valueIsInMap ? value.get(field.get('name')) : value}
         entry={entry}
         fieldsMetaData={metadata}
+        resolveWidget={resolveWidget}
+        getRemarkPlugins={getRemarkPlugins}
       />
     );
   };
@@ -71,10 +83,13 @@ export default class PreviewPane extends React.Component {
     // We retrieve the field by name so that this function can also be used in
     // custom preview templates, where the field object can't be passed in.
     let field = fields && fields.find(f => f.get('name') === name);
-    let value = values && values.get(field.get('name'));
-    let nestedFields = field.get('fields');
-    let singleField = field.get('field');
-    let metadata = fieldsMetaData && fieldsMetaData.get(field.get('name'), Map());
+    let value = Map.isMap(values) && values.get(field.get('name'));
+    if (field.get('meta')) {
+      value = this.props.entry.getIn(['meta', field.get('name')]);
+    }
+    const nestedFields = field.get('fields');
+    const singleField = field.get('field');
+    const metadata = fieldsMetaData && fieldsMetaData.get(field.get('name'), Map());
 
     if (nestedFields) {
       field = field.set('fields', this.getNestedWidgets(nestedFields, value, metadata));
@@ -85,8 +100,15 @@ export default class PreviewPane extends React.Component {
     }
 
     const labelledWidgets = ['string', 'text', 'number'];
-    if (Object.keys(this.inferedFields).indexOf(name) !== -1) {
-      value = this.inferedFields[name].defaultPreview(value);
+    const inferedField = Object.entries(this.inferedFields)
+      .filter(([key]) => {
+        const fieldToMatch = selectField(this.props.collection, key);
+        return fieldToMatch === field;
+      })
+      .map(([, value]) => value)[0];
+
+    if (inferedField) {
+      value = inferedField.defaultPreview(value);
     } else if (
       value &&
       labelledWidgets.indexOf(field.get('widget')) !== -1 &&
@@ -171,7 +193,7 @@ export default class PreviewPane extends React.Component {
   };
 
   render() {
-    const { entry, collection } = this.props;
+    const { entry, collection, config } = this.props;
 
     if (!entry || !entry.get('data')) {
       return null;
@@ -196,7 +218,7 @@ export default class PreviewPane extends React.Component {
     });
 
     if (!collection) {
-      <PreviewPaneFrame head={styleEls} />;
+      <PreviewPaneFrame id="preview-pane" head={styleEls} />;
     }
 
     const initialContent = `
@@ -208,9 +230,17 @@ export default class PreviewPane extends React.Component {
 `;
 
     return (
-      <ErrorBoundary>
-        <PreviewPaneFrame head={styleEls} initialContent={initialContent}>
-          <EditorPreviewContent {...{ previewComponent, previewProps }} />
+      <ErrorBoundary config={config}>
+        <PreviewPaneFrame id="preview-pane" head={styleEls} initialContent={initialContent}>
+          <FrameContextConsumer>
+            {({ document, window }) => {
+              return (
+                <EditorPreviewContent
+                  {...{ previewComponent, previewProps: { ...previewProps, document, window } }}
+                />
+              );
+            }}
+          </FrameContextConsumer>
         </PreviewPaneFrame>
       </ErrorBoundary>
     );
@@ -224,3 +254,25 @@ PreviewPane.propTypes = {
   fieldsMetaData: ImmutablePropTypes.map.isRequired,
   getAsset: PropTypes.func.isRequired,
 };
+
+function mapStateToProps(state) {
+  const isLoadingAsset = selectIsLoadingAsset(state.medias);
+  return { isLoadingAsset, config: state.config };
+}
+
+function mapDispatchToProps(dispatch) {
+  return {
+    boundGetAsset: (collection, entry) => boundGetAsset(dispatch, collection, entry),
+  };
+}
+
+function mergeProps(stateProps, dispatchProps, ownProps) {
+  return {
+    ...stateProps,
+    ...dispatchProps,
+    ...ownProps,
+    getAsset: dispatchProps.boundGetAsset(ownProps.collection, ownProps.entry),
+  };
+}
+
+export default connect(mapStateToProps, mapDispatchToProps, mergeProps)(PreviewPane);

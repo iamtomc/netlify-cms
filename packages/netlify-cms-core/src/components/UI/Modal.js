@@ -2,17 +2,19 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { css, Global, ClassNames } from '@emotion/core';
 import ReactModal from 'react-modal';
-import { transitions, shadows, lengths } from 'netlify-cms-ui-default';
+import { transitions, shadows, lengths, zIndex } from 'netlify-cms-ui-default';
 
-const ReactModalGlobalStyles = () => (
-  <Global
-    styles={css`
-      .ReactModal__Body--open {
-        overflow: hidden;
-      }
-    `}
-  />
-);
+function ReactModalGlobalStyles() {
+  return (
+    <Global
+      styles={css`
+        .ReactModal__Body--open {
+          overflow: hidden;
+        }
+      `}
+    />
+  );
+}
 
 const styleStrings = {
   modalBody: `
@@ -29,7 +31,7 @@ const styleStrings = {
     }
   `,
   overlay: `
-    z-index: 99999;
+    z-index: ${zIndex.zIndex99999};
     position: fixed;
     top: 0;
     left: 0;

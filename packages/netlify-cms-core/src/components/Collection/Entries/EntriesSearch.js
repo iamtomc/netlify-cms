@@ -2,12 +2,14 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { connect } from 'react-redux';
+import { isEqual } from 'lodash';
 import { Cursor } from 'netlify-cms-lib-util';
-import { selectSearchedEntries } from 'Reducers';
+
+import { selectSearchedEntries } from '../../../reducers';
 import {
   searchEntries as actionSearchEntries,
   clearSearch as actionClearSearch,
-} from 'Actions/search';
+} from '../../../actions/search';
 import Entries from './Entries';
 
 class EntriesSearch extends React.Component {
@@ -17,20 +19,25 @@ class EntriesSearch extends React.Component {
     clearSearch: PropTypes.func.isRequired,
     searchTerm: PropTypes.string.isRequired,
     collections: ImmutablePropTypes.seq,
+    collectionNames: PropTypes.array,
     entries: ImmutablePropTypes.list,
     page: PropTypes.number,
-    publicFolder: PropTypes.string,
   };
 
   componentDidMount() {
-    const { searchTerm, searchEntries } = this.props;
-    searchEntries(searchTerm);
+    const { searchTerm, searchEntries, collectionNames } = this.props;
+    searchEntries(searchTerm, collectionNames);
   }
 
   componentDidUpdate(prevProps) {
-    if (prevProps.searchTerm === this.props.searchTerm) return;
+    const { searchTerm, collectionNames } = this.props;
+
+    // check if the search parameters are the same
+    if (prevProps.searchTerm === searchTerm && isEqual(prevProps.collectionNames, collectionNames))
+      return;
+
     const { searchEntries } = prevProps;
-    searchEntries(this.props.searchTerm);
+    searchEntries(searchTerm, collectionNames);
   }
 
   componentWillUnmount() {
@@ -45,22 +52,21 @@ class EntriesSearch extends React.Component {
   };
 
   handleCursorActions = action => {
-    const { page, searchTerm, searchEntries } = this.props;
+    const { page, searchTerm, searchEntries, collectionNames } = this.props;
     if (action === 'append_next') {
       const nextPage = page + 1;
-      searchEntries(searchTerm, nextPage);
+      searchEntries(searchTerm, collectionNames, nextPage);
     }
   };
 
   render() {
-    const { collections, entries, publicFolder, isFetching } = this.props;
+    const { collections, entries, isFetching } = this.props;
     return (
       <Entries
         cursor={this.getCursor()}
         handleCursorActions={this.handleCursorActions}
         collections={collections}
         entries={entries}
-        publicFolder={publicFolder}
         isFetching={isFetching}
       />
     );
@@ -70,12 +76,11 @@ class EntriesSearch extends React.Component {
 function mapStateToProps(state, ownProps) {
   const { searchTerm } = ownProps;
   const collections = ownProps.collections.toIndexedSeq();
-  const isFetching = state.search.get('isFetching');
-  const page = state.search.get('page');
-  const entries = selectSearchedEntries(state);
-  const publicFolder = state.config.get('public_folder');
-
-  return { isFetching, page, collections, entries, publicFolder, searchTerm };
+  const collectionNames = ownProps.collections.keySeq().toArray();
+  const isFetching = state.search.isFetching;
+  const page = state.search.page;
+  const entries = selectSearchedEntries(state, collectionNames);
+  return { isFetching, page, collections, collectionNames, entries, searchTerm };
 }
 
 const mapDispatchToProps = {
@@ -83,7 +88,4 @@ const mapDispatchToProps = {
   clearSearch: actionClearSearch,
 };
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps,
-)(EntriesSearch);
+export default connect(mapStateToProps, mapDispatchToProps)(EntriesSearch);

@@ -15,25 +15,31 @@ const formatOptions = {
   dataProjection: 'EPSG:4326',
   featureProjection: 'EPSG:3857',
 };
-const getDefaultFormat = () => new GeoJSON(formatOptions);
 
-const getDefaultMap = (target, featuresLayer) =>
-  new Map({
+function getDefaultFormat() {
+  return new GeoJSON(formatOptions);
+}
+
+function getDefaultMap(target, featuresLayer) {
+  return new Map({
     target,
     layers: [new TileLayer({ source: new OSMSource() }), featuresLayer],
     view: new View({ center: [0, 0], zoom: 2 }),
   });
+}
 
 export default function withMapControl({ getFormat, getMap } = {}) {
   return class MapControl extends React.Component {
     static propTypes = {
       onChange: PropTypes.func.isRequired,
       field: PropTypes.object.isRequired,
+      height: PropTypes.string,
       value: PropTypes.node,
     };
 
     static defaultProps = {
       value: '',
+      height: '400px',
     };
 
     constructor(props) {
@@ -66,6 +72,8 @@ export default function withMapControl({ getFormat, getMap } = {}) {
     }
 
     render() {
+      const { height } = this.props;
+
       return (
         <ClassNames>
           {({ cx, css }) => (
@@ -76,6 +84,7 @@ export default function withMapControl({ getFormat, getMap } = {}) {
                   ${olStyles};
                   padding: 0;
                   overflow: hidden;
+                  height: ${height};
                 `,
               )}
               ref={this.mapContainer}

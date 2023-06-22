@@ -1,4 +1,5 @@
 import { has, flow, partial, map } from 'lodash';
+
 import { joinPatternSegments, combinePatterns, replaceWhen } from '../regexHelper';
 
 /**
@@ -124,14 +125,14 @@ const escapePatterns = [
   /(`+)[^`]*(\1)/g,
 
   /**
-   * Links, Images, References, and Footnotes
+   * Links and Images
    *
-   * Match strings surrounded by brackets. This could be improved to
-   * specifically match only the exact syntax of each covered entity, but
-   * doing so through current approach would incur a considerable performance
-   * penalty.
+   * Match strings surrounded by square brackets, except when the opening
+   * bracket is followed by a caret. This could be improved to specifically
+   * match only the exact syntax of each covered entity, but doing so through
+   * current approach would incur a considerable performance penalty.
    */
-  /(\[)[^\]]*]/g,
+  /(\[(?!\^)+)[^\]]*]/g,
 ];
 
 /**
@@ -236,14 +237,14 @@ function escape(delim) {
  * stringification.
  */
 export default function remarkEscapeMarkdownEntities() {
-  const transform = (node, index) => {
+  function transform(node, index) {
     /**
      * Shortcode nodes will intentionally inject markdown entities in text node
      * children not be escaped.
      */
     if (has(node.data, 'shortcode')) return node;
 
-    const children = node.children && node.children.map(transform);
+    const children = node.children ? { children: node.children.map(transform) } : {};
 
     /**
      * Escape characters in text and html nodes only. We store a lot of normal
@@ -255,14 +256,14 @@ export default function remarkEscapeMarkdownEntities() {
        * common characters.
        */
       const value = index === 0 ? escapeAllChars(node.value) : escapeCommonChars(node.value);
-      return { ...node, value, children };
+      return { ...node, value, ...children };
     }
 
     /**
      * Always return nodes with recursively mapped children.
      */
-    return { ...node, children };
-  };
+    return { ...node, ...children };
+  }
 
   return transform;
 }

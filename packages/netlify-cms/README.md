@@ -1,8 +1,12 @@
 # Netlify CMS
-[![](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/netlify/netlifycms)
-
-A CMS for static site generators. Give non-technical users a simple way to edit
+A CMS for static site generators. Give users a simple way to edit
 and add content to any site built with a static site generator.
+
+## Community Chat
+
+<a href="https://netlifycms.org/chat">
+  <img alt="Join us on Discord" src="https://raw.githubusercontent.com/decaporg/decap-cms/master/website/static/img/discord.png" width="165">
+</a>
 
 ## How it works
 
@@ -26,18 +30,14 @@ The Netlify CMS can be used in two different ways.
   To learn more about this installation method, refer to the [Quick Start Guide](https://www.netlifycms.org/docs/quick-start/)
 * A complete, more complex install, that gives you more flexibility but requires that you use a static site builder with a build system that supports npm packages.
 
-# Community
-
-Netlify CMS has a [Gitter community](https://gitter.im/netlify/netlifycms) where members of the community hang out and share things about the project, as well as give and receive support.
-
 # Contributing
 
-New contributors are always welcome! Check out [CONTRIBUTING.md](https://github.com/netlify/netlify-cms/blob/master/CONTRIBUTING.md) to get involved.
+New contributors are always welcome! Check out [CONTRIBUTING.md](https://github.com/decaporg/decap-cms/blob/master/CONTRIBUTING.md) to get involved.
 
 # Change Log
 
 This project adheres to [Semantic Versioning](http://semver.org/).
-Every release is documented on the Github [Releases](https://github.com/netlify/netlify-cms/releases) page.
+Every release is documented on the Github [Releases](https://github.com/decaporg/decap-cms/releases) page.
 
 # License
 
@@ -50,10 +50,10 @@ Please make sure you understand its [implications and guarantees](https://writin
 These services support Netlify CMS development by providing free infrastructure.
 <p>
   <a href="https://www.travis-ci.org">
-    <img src="https://raw.githubusercontent.com/netlify/netlify-cms/master/img/travis.png" height="38"/>
+    <img src="https://raw.githubusercontent.com/decaporg/decap-cms/master/img/travis.png" height="38"/>
   </a>
   <img src="https://spacergif.org/spacer.gif" width="20"/>
   <a href="https://www.browserstack.com">
-    <img src="https://raw.githubusercontent.com/netlify/netlify-cms/master/img/browserstack.png" height="38"/>
+    <img src="https://raw.githubusercontent.com/decaporg/decap-cms/master/img/browserstack.png" height="38"/>
   </a>
 </p>

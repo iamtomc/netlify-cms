@@ -5,7 +5,8 @@ import { connect } from 'react-redux';
 import { orderBy, map } from 'lodash';
 import { translate } from 'react-polyglot';
 import fuzzy from 'fuzzy';
-import { resolvePath, fileExtension } from 'netlify-cms-lib-util';
+import { fileExtension } from 'netlify-cms-lib-util';
+
 import {
   loadMedia as loadMediaAction,
   persistMedia as persistMediaAction,
@@ -13,26 +14,26 @@ import {
   insertMedia as insertMediaAction,
   loadMediaDisplayURL as loadMediaDisplayURLAction,
   closeMediaLibrary as closeMediaLibraryAction,
-} from 'Actions/mediaLibrary';
-import MediaLibraryModal from './MediaLibraryModal';
+} from '../../actions/mediaLibrary';
+import { selectMediaFiles } from '../../reducers/mediaLibrary';
+import MediaLibraryModal, { fileShape } from './MediaLibraryModal';
 
 /**
  * Extensions used to determine which files to show when the media library is
  * accessed from an image insertion field.
  */
-const IMAGE_EXTENSIONS_VIEWABLE = ['jpg', 'jpeg', 'webp', 'gif', 'png', 'bmp', 'tiff', 'svg'];
+const IMAGE_EXTENSIONS_VIEWABLE = [
+  'jpg',
+  'jpeg',
+  'webp',
+  'gif',
+  'png',
+  'bmp',
+  'tiff',
+  'svg',
+  'avif',
+];
 const IMAGE_EXTENSIONS = [...IMAGE_EXTENSIONS_VIEWABLE];
-
-const fileShape = {
-  displayURL: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
-  id: PropTypes.string.isRequired,
-  key: PropTypes.string.isRequired,
-  name: PropTypes.string.isRequired,
-  queryOrder: PropTypes.number,
-  size: PropTypes.number,
-  url: PropTypes.string,
-  urlIsPublicPath: PropTypes.bool,
-};
 
 class MediaLibrary extends React.Component {
   static propTypes = {
@@ -50,13 +51,13 @@ class MediaLibrary extends React.Component {
     hasNextPage: PropTypes.bool,
     isPaginating: PropTypes.bool,
     privateUpload: PropTypes.bool,
+    config: ImmutablePropTypes.map,
     loadMedia: PropTypes.func.isRequired,
     dynamicSearchQuery: PropTypes.string,
     page: PropTypes.number,
     persistMedia: PropTypes.func.isRequired,
     deleteMedia: PropTypes.func.isRequired,
     insertMedia: PropTypes.func.isRequired,
-    publicFolder: PropTypes.string,
     closeMediaLibrary: PropTypes.func.isRequired,
     t: PropTypes.func.isRequired,
   };
@@ -119,18 +120,18 @@ class MediaLibrary extends React.Component {
   toTableData = files => {
     const tableData =
       files &&
-      files.map(({ key, name, id, size, queryOrder, url, urlIsPublicPath, displayURL }) => {
+      files.map(({ key, name, id, size, path, queryOrder, displayURL, draft }) => {
         const ext = fileExtension(name).toLowerCase();
         return {
           key,
           id,
           name,
+          path,
           type: ext.toUpperCase(),
           size,
           queryOrder,
-          url,
-          urlIsPublicPath,
           displayURL,
+          draft,
           isImage: IMAGE_EXTENSIONS.includes(ext),
           isViewableImage: IMAGE_EXTENSIONS_VIEWABLE.includes(ext),
         };
@@ -167,19 +168,30 @@ class MediaLibrary extends React.Component {
      * get the file for upload, and retain the synthetic event for access after
      * the asynchronous persist operation.
      */
+    event.persist();
     event.stopPropagation();
     event.preventDefault();
-    event.persist();
-    const { persistMedia, privateUpload } = this.props;
+    const { persistMedia, privateUpload, config, t, field } = this.props;
     const { files: fileList } = event.dataTransfer || event.target;
     const files = [...fileList];
     const file = files[0];
+    const maxFileSize = config.get('max_file_size');
 
-    await persistMedia(file, { privateUpload });
+    if (maxFileSize && file.size > maxFileSize) {
+      window.alert(
+        t('mediaLibrary.mediaLibrary.fileTooLarge', {
+          size: Math.floor(maxFileSize / 1000),
+        }),
+      );
+    } else {
+      await persistMedia(file, { privateUpload, field });
+
+      this.setState({ selectedFile: this.props.files[0] });
+
+      this.scrollToTop();
+    }
 
     event.target.value = null;
-
-    this.scrollToTop();
   };
 
   /**
@@ -188,10 +200,9 @@ class MediaLibrary extends React.Component {
    */
   handleInsert = () => {
     const { selectedFile } = this.state;
-    const { name, url, urlIsPublicPath } = selectedFile;
-    const { insertMedia, publicFolder } = this.props;
-    const publicPath = urlIsPublicPath ? url : resolvePath(name, publicFolder);
-    insertMedia(publicPath);
+    const { path } = selectedFile;
+    const { insertMedia, field } = this.props;
+    insertMedia(path, field);
     this.handleClose();
   };
 
@@ -209,6 +220,36 @@ class MediaLibrary extends React.Component {
       this.setState({ selectedFile: {} });
     });
   };
+
+  /**
+   * Downloads the selected file.
+   */
+  handleDownload = () => {
+    const { selectedFile } = this.state;
+    const { displayURLs } = this.props;
+    const url = displayURLs.getIn([selectedFile.id, 'url']) || selectedFile.url;
+    if (!url) {
+      return;
+    }
+
+    const filename = selectedFile.name;
+
+    const element = document.createElement('a');
+    element.setAttribute('href', url);
+    element.setAttribute('download', filename);
+
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    element.click();
+
+    document.body.removeChild(element);
+    this.setState({ selectedFile: {} });
+  };
+
+  /**
+   *
+   */
 
   handleLoadMore = () => {
     const { loadMedia, dynamicSearchQuery, page, privateUpload } = this.props;
@@ -302,6 +343,7 @@ class MediaLibrary extends React.Component {
         handlePersist={this.handlePersist}
         handleDelete={this.handleDelete}
         handleInsert={this.handleInsert}
+        handleDownload={this.handleDownload}
         setScrollContainerRef={ref => (this.scrollContainerRef = ref)}
         handleAssetClick={this.handleAssetClick}
         handleLoadMore={this.handleLoadMore}
@@ -313,15 +355,13 @@ class MediaLibrary extends React.Component {
   }
 }
 
-const mapStateToProps = state => {
-  const { config, mediaLibrary } = state;
-  const configProps = {
-    publicFolder: config.get('public_folder'),
-  };
+function mapStateToProps(state) {
+  const { mediaLibrary } = state;
+  const field = mediaLibrary.get('field');
   const mediaLibraryProps = {
     isVisible: mediaLibrary.get('isVisible'),
     canInsert: mediaLibrary.get('canInsert'),
-    files: mediaLibrary.get('files'),
+    files: selectMediaFiles(state, field),
     displayURLs: mediaLibrary.get('displayURLs'),
     dynamicSearch: mediaLibrary.get('dynamicSearch'),
     dynamicSearchActive: mediaLibrary.get('dynamicSearchActive'),
@@ -331,12 +371,14 @@ const mapStateToProps = state => {
     isPersisting: mediaLibrary.get('isPersisting'),
     isDeleting: mediaLibrary.get('isDeleting'),
     privateUpload: mediaLibrary.get('privateUpload'),
+    config: mediaLibrary.get('config'),
     page: mediaLibrary.get('page'),
     hasNextPage: mediaLibrary.get('hasNextPage'),
     isPaginating: mediaLibrary.get('isPaginating'),
+    field,
   };
-  return { ...configProps, ...mediaLibraryProps };
-};
+  return { ...mediaLibraryProps };
+}
 
 const mapDispatchToProps = {
   loadMedia: loadMediaAction,
@@ -347,7 +389,4 @@ const mapDispatchToProps = {
   closeMediaLibrary: closeMediaLibraryAction,
 };
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps,
-)(translate()(MediaLibrary));
+export default connect(mapStateToProps, mapDispatchToProps)(translate()(MediaLibrary));

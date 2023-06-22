@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
+
 import icons from './Icon/icons';
 
 const IconWrapper = styled.span`
@@ -35,14 +36,14 @@ const IconWrapper = styled.span`
  * Returned value is a string of shape `${degrees}deg`, for use in a CSS
  * transform.
  */
-const getRotation = (iconDirection, newDirection) => {
+function getRotation(iconDirection, newDirection) {
   if (!iconDirection || !newDirection) {
     return '0deg';
   }
   const rotations = { right: 90, down: 180, left: 270, up: 360 };
   const degrees = rotations[newDirection] - rotations[iconDirection];
   return `${degrees}deg`;
-};
+}
 
 const sizes = {
   xsmall: '12px',
@@ -51,14 +52,19 @@ const sizes = {
   large: '32px',
 };
 
-const Icon = ({ type, direction, size = 'medium', className }) => (
-  <IconWrapper
-    className={className}
-    dangerouslySetInnerHTML={{ __html: icons[type].image }}
-    size={sizes[size] || size}
-    rotation={getRotation(icons[type].direction, direction)}
-  />
-);
+function Icon({ type, direction, size = 'medium', className }) {
+  const IconSvg = icons[type].image;
+
+  return (
+    <IconWrapper
+      className={className}
+      size={sizes[size] || size}
+      rotation={getRotation(icons[type].direction, direction)}
+    >
+      <IconSvg />
+    </IconWrapper>
+  );
+}
 
 Icon.propTypes = {
   type: PropTypes.string.isRequired,

@@ -7,7 +7,7 @@ const defaultOptions = {
   output_filename_only: false,
 };
 /**
- * This configuration hash cannot be overriden, as the values here are required
+ * This configuration hash cannot be overridden, as the values here are required
  * for the integration to work properly.
  */
 const enforcedConfig = {
@@ -58,10 +58,10 @@ async function init({ options = {}, handleInsert } = {}) {
 
   await loadScript('https://media-library.cloudinary.com/global/all.js');
 
-  const insertHandler = data => {
+  function insertHandler(data) {
     const assets = data.assets.map(asset => getAssetUrl(asset, resolvedOptions));
-    handleInsert(assets.length > 1 ? assets : assets[0]);
-  };
+    handleInsert(providedConfig.multiple || assets.length > 1 ? assets : assets[0]);
+  }
 
   const mediaLibrary = window.cloudinary.createMediaLibrary(cloudinaryConfig, { insertHandler });
 

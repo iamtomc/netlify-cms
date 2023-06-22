@@ -43,7 +43,7 @@ const CardTitle = styled.h2`
   color: ${colors.textLead};
 `;
 
-const CardDate = styled.div`
+const CardDateContainer = styled.div`
   ${styles.text};
 `;
 
@@ -82,8 +82,7 @@ const PublishButton = styled.button`
   margin-left: 6px;
 
   &[disabled] {
-    background-color: ${colorsRaw.grayLight};
-    color: ${colorsRaw.gray};
+    ${buttons.disabled};
   }
 `;
 
@@ -98,8 +97,27 @@ const WorkflowCardContainer = styled.div`
   }
 `;
 
-const WorkflowCard = ({
-  collectionName,
+function lastChangePhraseKey(date, author) {
+  if (date && author) {
+    return 'lastChange';
+  } else if (date) {
+    return 'lastChangeNoAuthor';
+  } else if (author) {
+    return 'lastChangeNoDate';
+  }
+}
+
+const CardDate = translate()(({ t, date, author }) => {
+  const key = lastChangePhraseKey(date, author);
+  if (key) {
+    return (
+      <CardDateContainer>{t(`workflow.workflowCard.${key}`, { date, author })}</CardDateContainer>
+    );
+  }
+});
+
+function WorkflowCard({
+  collectionLabel,
   title,
   authorLastChange,
   body,
@@ -107,48 +125,52 @@ const WorkflowCard = ({
   editLink,
   timestamp,
   onDelete,
+  allowPublish,
   canPublish,
   onPublish,
+  postAuthor,
   t,
-}) => (
-  <WorkflowCardContainer>
-    <WorkflowLink to={editLink}>
-      <CardCollection>{collectionName}</CardCollection>
-      <CardTitle>{title}</CardTitle>
-      <CardDate>
-        {t('workflow.workflowCard.lastChange', {
-          date: timestamp || '',
-          author: authorLastChange || '',
-        })}
-      </CardDate>
-      <CardBody>{body}</CardBody>
-    </WorkflowLink>
-    <CardButtonContainer>
-      <DeleteButton onClick={onDelete}>
-        {isModification
-          ? t('workflow.workflowCard.deleteChanges')
-          : t('workflow.workflowCard.deleteNewEntry')}
-      </DeleteButton>
-      <PublishButton disabled={!canPublish} onClick={onPublish}>
-        {isModification
-          ? t('workflow.workflowCard.publishChanges')
-          : t('workflow.workflowCard.publishNewEntry')}
-      </PublishButton>
-    </CardButtonContainer>
-  </WorkflowCardContainer>
-);
+}) {
+  return (
+    <WorkflowCardContainer>
+      <WorkflowLink to={editLink}>
+        <CardCollection>{collectionLabel}</CardCollection>
+        {postAuthor}
+        <CardTitle>{title}</CardTitle>
+        {(timestamp || authorLastChange) && <CardDate date={timestamp} author={authorLastChange} />}
+        <CardBody>{body}</CardBody>
+      </WorkflowLink>
+      <CardButtonContainer>
+        <DeleteButton onClick={onDelete}>
+          {isModification
+            ? t('workflow.workflowCard.deleteChanges')
+            : t('workflow.workflowCard.deleteNewEntry')}
+        </DeleteButton>
+        {allowPublish && (
+          <PublishButton disabled={!canPublish} onClick={onPublish}>
+            {isModification
+              ? t('workflow.workflowCard.publishChanges')
+              : t('workflow.workflowCard.publishNewEntry')}
+          </PublishButton>
+        )}
+      </CardButtonContainer>
+    </WorkflowCardContainer>
+  );
+}
 
 WorkflowCard.propTypes = {
-  collectionName: PropTypes.string.isRequired,
-  title: PropTypes.string.isRequired,
-  authorLastChange: PropTypes.string.isRequired,
-  body: PropTypes.string.isRequired,
+  collectionLabel: PropTypes.string.isRequired,
+  title: PropTypes.string,
+  authorLastChange: PropTypes.string,
+  body: PropTypes.string,
   isModification: PropTypes.bool,
   editLink: PropTypes.string.isRequired,
   timestamp: PropTypes.string.isRequired,
   onDelete: PropTypes.func.isRequired,
+  allowPublish: PropTypes.bool.isRequired,
   canPublish: PropTypes.bool.isRequired,
   onPublish: PropTypes.func.isRequired,
+  postAuthor: PropTypes.string,
   t: PropTypes.func.isRequired,
 };
 

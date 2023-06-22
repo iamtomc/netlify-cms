@@ -8,7 +8,7 @@ const IMAGE_HEIGHT = 160;
 
 const Card = styled.div`
   width: ${props => props.width};
-  height: 240px;
+  height: ${props => props.height};
   margin: ${props => props.margin};
   border: ${borders.textField};
   border-color: ${props => props.isSelected && colors.active};
@@ -27,6 +27,7 @@ const CardImageWrapper = styled.div`
   ${effects.checkerboard};
   ${shadows.inset};
   border-bottom: solid ${lengths.borderWidth} ${colors.textFieldBorder};
+  position: relative;
 `;
 
 const CardImage = styled.img`
@@ -53,21 +54,48 @@ const CardText = styled.p`
   line-height: 1.3 !important;
 `;
 
+const DraftText = styled.p`
+  color: ${colors.mediaDraftText};
+  background-color: ${colors.mediaDraftBackground};
+  position: absolute;
+  padding: 8px;
+  border-radius: ${lengths.borderRadius} 0 ${lengths.borderRadius} 0;
+`;
+
 class MediaLibraryCard extends React.Component {
   render() {
-    const { isSelected, displayURL, text, onClick, width, margin, isPrivate, type } = this.props;
+    const {
+      isSelected,
+      displayURL,
+      text,
+      onClick,
+      draftText,
+      width,
+      height,
+      margin,
+      isPrivate,
+      type,
+      isViewableImage,
+      isDraft,
+    } = this.props;
     const url = displayURL.get('url');
     return (
       <Card
         isSelected={isSelected}
         onClick={onClick}
         width={width}
+        height={height}
         margin={margin}
         tabIndex="-1"
         isPrivate={isPrivate}
       >
         <CardImageWrapper>
-          {url ? <CardImage src={url} /> : <CardFileIcon>{type}</CardFileIcon>}
+          {isDraft ? <DraftText data-testid="draft-text">{draftText}</DraftText> : null}
+          {url && isViewableImage ? (
+            <CardImage loading="lazy" src={url} />
+          ) : (
+            <CardFileIcon data-testid="card-file-icon">{type}</CardFileIcon>
+          )}
         </CardImageWrapper>
         <CardText>{text}</CardText>
       </Card>
@@ -86,10 +114,15 @@ MediaLibraryCard.propTypes = {
   displayURL: ImmutablePropTypes.map.isRequired,
   text: PropTypes.string.isRequired,
   onClick: PropTypes.func.isRequired,
+  draftText: PropTypes.string.isRequired,
   width: PropTypes.string.isRequired,
+  height: PropTypes.string.isRequired,
   margin: PropTypes.string.isRequired,
   isPrivate: PropTypes.bool,
   type: PropTypes.string,
+  isViewableImage: PropTypes.bool.isRequired,
+  loadDisplayURL: PropTypes.func.isRequired,
+  isDraft: PropTypes.bool,
 };
 
 export default MediaLibraryCard;

@@ -4,7 +4,8 @@ import { css } from '@emotion/core';
 import styled from '@emotion/styled';
 import { translate } from 'react-polyglot';
 import { Icon, Dropdown, DropdownItem, DropdownButton, colors } from 'netlify-cms-ui-default';
-import { stripProtocol } from 'Lib/urlHelper';
+
+import { stripProtocol } from '../../lib/urlHelper';
 
 const styles = {
   avatarImage: css`
@@ -39,37 +40,61 @@ const AppHeaderSiteLink = styled.a`
   padding: 10px 16px;
 `;
 
-const Avatar = ({ imageUrl }) =>
-  imageUrl ? <AvatarImage src={imageUrl} /> : <AvatarPlaceholderIcon type="user" size="large" />;
+const AppHeaderTestRepoIndicator = styled.a`
+  font-size: 14px;
+  font-weight: 400;
+  color: #7b8290;
+  padding: 10px 16px;
+`;
+
+function Avatar({ imageUrl }) {
+  return imageUrl ? (
+    <AvatarImage src={imageUrl} />
+  ) : (
+    <AvatarPlaceholderIcon type="user" size="large" />
+  );
+}
 
 Avatar.propTypes = {
   imageUrl: PropTypes.string,
 };
 
-const SettingsDropdown = ({ displayUrl, imageUrl, onLogoutClick, t }) => (
-  <React.Fragment>
-    {displayUrl ? (
-      <AppHeaderSiteLink href={displayUrl} target="_blank">
-        {stripProtocol(displayUrl)}
-      </AppHeaderSiteLink>
-    ) : null}
-    <Dropdown
-      dropdownTopOverlap="50px"
-      dropdownWidth="100px"
-      dropdownPosition="right"
-      renderButton={() => (
-        <AvatarDropdownButton>
-          <Avatar imageUrl={imageUrl} />
-        </AvatarDropdownButton>
+function SettingsDropdown({ displayUrl, isTestRepo, imageUrl, onLogoutClick, t }) {
+  return (
+    <React.Fragment>
+      {isTestRepo && (
+        <AppHeaderTestRepoIndicator
+          href="https://www.netlifycms.org/docs/test-backend"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Test Backend ↗
+        </AppHeaderTestRepoIndicator>
       )}
-    >
-      <DropdownItem label={t('ui.settingsDropdown.logOut')} onClick={onLogoutClick} />
-    </Dropdown>
-  </React.Fragment>
-);
+      {displayUrl ? (
+        <AppHeaderSiteLink href={displayUrl} target="_blank">
+          {stripProtocol(displayUrl)}
+        </AppHeaderSiteLink>
+      ) : null}
+      <Dropdown
+        dropdownTopOverlap="50px"
+        dropdownWidth="100px"
+        dropdownPosition="right"
+        renderButton={() => (
+          <AvatarDropdownButton>
+            <Avatar imageUrl={imageUrl} />
+          </AvatarDropdownButton>
+        )}
+      >
+        <DropdownItem label={t('ui.settingsDropdown.logOut')} onClick={onLogoutClick} />
+      </Dropdown>
+    </React.Fragment>
+  );
+}
 
 SettingsDropdown.propTypes = {
   displayUrl: PropTypes.string,
+  isTestRepo: PropTypes.bool,
   imageUrl: PropTypes.string,
   onLogoutClick: PropTypes.func.isRequired,
   t: PropTypes.func.isRequired,

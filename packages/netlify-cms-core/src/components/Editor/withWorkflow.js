@@ -1,20 +1,21 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { EDITORIAL_WORKFLOW } from 'Constants/publishModes';
-import { selectUnpublishedEntry } from 'Reducers';
-import { selectAllowDeletion } from 'Reducers/collections';
-import { loadUnpublishedEntry, persistUnpublishedEntry } from 'Actions/editorialWorkflow';
+
+import { EDITORIAL_WORKFLOW } from '../../constants/publishModes';
+import { selectUnpublishedEntry } from '../../reducers';
+import { selectAllowDeletion } from '../../reducers/collections';
+import { loadUnpublishedEntry, persistUnpublishedEntry } from '../../actions/editorialWorkflow';
 
 function mapStateToProps(state, ownProps) {
   const { collections } = state;
-  const isEditorialWorkflow = state.config.get('publish_mode') === EDITORIAL_WORKFLOW;
+  const isEditorialWorkflow = state.config.publish_mode === EDITORIAL_WORKFLOW;
   const collection = collections.get(ownProps.match.params.name);
   const returnObj = {
     isEditorialWorkflow,
     showDelete: !ownProps.newEntry && selectAllowDeletion(collection),
   };
   if (isEditorialWorkflow) {
-    const slug = ownProps.match.params.slug;
+    const slug = ownProps.match.params[0];
     const unpublishedEntry = selectUnpublishedEntry(state, collection.get('name'), slug);
     if (unpublishedEntry) {
       returnObj.unpublishedEntry = true;

@@ -1,24 +1,23 @@
 ---
+group: Guides
+weight: 30
 title: Jekyll
-weight: 20
-group: guides
 ---
-
 ## Introduction
 
-This section will help you integrate Netlify CMS with a new or existing Jekyll project.
+This section will help you integrate Decap CMS with a new or existing Jekyll project.
 
 [Jekyll](https://jekyllrb.com/) is a blog-aware static site generator built with Ruby. [Github Pages](https://pages.github.com/) are powered by Jekyll, making it a popular choice for developer blogs and project pages.
 
-If you're starting a new project, the fastest route to publishing on a Jekyll website with Netlify CMS is to [deploy a template on Netlify](https://templates.netlify.com/).
+If you're starting a new project, the fastest route to publishing on a Jekyll website with Decap CMS is to [deploy a template on Netlify](https://templates.netlify.com/).
 
 ## Setup
 
 This guide will use the blog you get if you follow the [really excellent official Jekyll step by step tutorial](https://jekyllrb.com/docs/step-by-step/01-setup/) as a starting point. If you're new to Jekyll - I recommended you start by following the tutorial so you know your way around your new blog. Otherwise [you can clone this repo](https://github.com/adamwatters/jekyll-tutorial-with-netlify-cms/tree/without-cms) and checkout the `without-cms` branch.
 
-![Jekyll tutorial blog screenshot](https://www.netlifycms.org/img/screenshot-jekyll-tutorial-blog.png?raw=true)
+![Jekyll tutorial blog screenshot](https://www.decapcms.org/img/screenshot-jekyll-tutorial-blog.png?raw=true)
 
-## Add Netlify CMS
+## Add Decap CMS
 
 ### Add admin/index.html
 
@@ -32,9 +31,11 @@ Create a file `admin/index.html` in the root of your repo - it should look like 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Content Manager</title>
+    <!-- Include the identity widget -->
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" type="text/javascript"></script>
   </head>
   <body>
-    <!-- Include the script that builds the page and powers Netlify CMS -->
+    <!-- Include the script that builds the page and powers Decap CMS -->
     <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
   </body>
 </html>
@@ -49,7 +50,7 @@ Create a file `admin/config.yml` in the root of your repo - it should look like 
 
 backend:
   name: git-gateway
-  branch: master # Branch to update (optional; defaults to master)
+  branch: main # Branch to update (optional; defaults to master)
 media_folder: 'assets/uploads'
 collections:
   - name: 'blog'
@@ -59,15 +60,17 @@ collections:
       - { name: Title }
 ```
 
-### Setup Backend
+### Enable authentication for CMS users
 
-Follow the directions in the docs [to enable Identity and Git Gateway](https://www.netlifycms.org/docs/add-to-your-site/#enable-identity-and-git-gateway) then add the [Indentity Widget](https://www.netlifycms.org/docs/add-to-your-site/#add-the-netlify-identity-widget)
+Decap CMS stores content in your online Git repository. Therefore, to make content changes, users need to authenticate with the corresponding Git provider to prove that they have read and write access to that content.
+
+Follow the directions in the Introduction section to [enable Netlify Identity and Git Gateway services](https://www.decapcms.org/docs/add-to-your-site/#enable-identity-and-git-gateway) for the backend, then [add the Identity widget](https://www.decapcms.org/docs/add-to-your-site/#add-the-netlify-identity-widget) to render a login portal on the frontend.
 
 ## CMS Configuration
 
 ### Blog Collection
 
-We'll start by updating the `blog` collection. Blogging is baked into into Jekyll, and the `_posts/` directory uses [some special conventions](https://jekyllrb.com/docs/posts/) we'll need to keep in mind as we configure Netlify CMS. Copy and paste the following into your `config.yml`.
+We'll start by updating the `blog` collection. Blogging is baked into Jekyll, and the `_posts/` directory uses [some special conventions](https://jekyllrb.com/docs/posts/) we'll need to keep in mind as we configure Decap CMS. Copy and paste the following into your `config.yml`.
 
 ```yaml
 collections:
@@ -87,17 +90,18 @@ collections:
 
 A few things to note.
 
-- We set the `slug` to `'{{year}}-{{month}}-{{day}}-{{slug}}'` because [Jekyll requires this format for blog posts](https://jekyllrb.com/docs/posts/#creating-posts). `year`, `month`, and `day` will be extracted from the `date` field, and `slug` will be generated from the `title` field.
-- We added `editor` configuration with a field `preview: false`. This will eliminate the preview pane. Because Jekyll uses Liquid templates, there currently isn't a good way to provide a preview of pages as you update the content.
-- The `layout` field default is set to `post` so Jekyll knows to use `_layouts/post.html` when it renders a post. This field is hidden because we want all posts to use the same layout.
-- The `date` and `title` field will be used by the `slug` - as noted above, Jekyll relies on the filename to determine a post's publish date, but Netlify CMS does not pull date information from the filename and requires a frontmatter `date` field. **Note** Changing the `date` or `title` fields in Netlify CMS will not update the filename. This has a few implications...
-  - If you change the `date` or `title` fields in Netlify CMS, Jekyll won't notice
-  - You don't neccassarily need to change the `date` and `title` fields for existing posts, but if you don't the filenames and frontmatter will disagree in a way that might be confusing
-  - If you want to avoid these issues, use a regular Jekyll collection instead of the special `_posts` directory
+* We set the `slug` to `'{{year}}-{{month}}-{{day}}-{{slug}}'` because [Jekyll requires this format for blog posts](https://jekyllrb.com/docs/posts/#creating-posts). `year`, `month`, and `day` will be extracted from the `date` field, and `slug` will be generated from the `title` field.
+* We added `editor` configuration with a field `preview: false`. This will eliminate the preview pane. Because Jekyll uses Liquid templates, there currently isn't a good way to provide a preview of pages as you update the content.
+* The `layout` field default is set to `post` so Jekyll knows to use `_layouts/post.html` when it renders a post. This field is hidden because we want all posts to use the same layout.
+* The `date` and `title` field will be used by the `slug` - as noted above, Jekyll relies on the filename to determine a post's publish date, but Decap CMS does not pull date information from the filename and requires a frontmatter `date` field. **Note** Changing the `date` or `title` fields in Decap CMS will not update the filename. This has a few implications:
+
+  * If you change the `date` or `title` fields in Decap CMS, Jekyll won't notice
+  * You don't necessarily need to change the `date` and `title` fields for existing posts, but if you don't the filenames and frontmatter will disagree in a way that might be confusing
+  * If you want to avoid these issues, use a regular Jekyll collection instead of the special `_posts` directory
 
 ### Author Collection
 
-In addition to `_posts`, the Jekyll tutorial blog includes a collection of authors in the `_authors` directory. Before we can configure Netlify CMS to work with the `authors` collection, we'll need to make a couple tweeks to our Jekyll blog. Here's the front matter for one of the authors.
+In addition to `_posts`, the Jekyll tutorial blog includes a collection of authors in the `_authors` directory. Before we can configure Decap CMS to work with the `authors` collection, we'll need to make a couple tweaks to our Jekyll blog. Here's the front matter for one of the authors.
 
 ```yaml
 short_name: jill
@@ -105,7 +109,7 @@ name: Jill Smith
 position: Chief Editor
 ```
 
-`name` has special meaning as a unique identifier in Netlify CMS, but as set up now our Jekyll blog is using `short_name` as the unique identifier for authors. For each author, update the frontmatter like so.
+`name` has special meaning as a unique identifier in Decap CMS, but as set up now our Jekyll blog is using `short_name` as the unique identifier for authors. For each author, update the frontmatter like so.
 
 ```yaml
 name: jill
@@ -113,7 +117,7 @@ display_name: Jill Smith
 position: Chief Editor
 ```
 
-then update `_layouts/author.html` and `staff.html` accordingly.
+then update `_layouts/author.html`, `_layouts/post.html` and `staff.html` accordingly.
 
 ```html
 <!-- _layouts/author.html -->
@@ -126,13 +130,28 @@ then update `_layouts/author.html` and `staff.html` accordingly.
 
 <h2>Posts</h2>
 <ul>
-  {% assign filtered_posts = site.posts | where: 'author', page.name %} {% for
-  post in filtered_posts %}
+  {% assign filtered_posts = site.posts | where: 'author', page.name %} {% for post in
+  filtered_posts %}
   <li>
     <a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a>
   </li>
   {% endfor %}
 </ul>
+```
+
+```html
+<!-- _layouts/post.html -->
+--- layout: default ---
+
+<h1>{{ page.title }}</h1>
+
+<p>
+  {{ page.date | date_to_string }} {% assign author = site.authors | where: 'name', page.author |
+  first %} {% if author %} - <a href="{{ author.url }}">{{ author.display_name }}</a>
+  {% endif %}
+</p>
+
+{{ content }}
 ```
 
 ```html
@@ -166,12 +185,12 @@ Next, copy and paste the following into the collections array in `config.yml` be
   fields:
     - { label: 'Layout', name: 'layout', widget: 'hidden', default: 'author' }
     - { label: 'Short Name', name: 'name', widget: 'string' }
-    - { label: 'Diplay Name', name: 'display_name', widget: 'string' }
+    - { label: 'Display Name', name: 'display_name', widget: 'string' }
     - { label: 'Position', name: 'position', widget: 'string' }
     - { label: 'Body', name: 'body', widget: 'markdown' }
 ```
 
-Now that we have the `authors` collection configured, we can add an `author` field to the `blog` collection. We'll use the [relation widget](https://www.netlifycms.org/docs/widgets/#relation) to define the relationship between blog posts and authors.
+Now that we have the `authors` collection configured, we can add an `author` field to the `blog` collection. We'll use the [relation widget](https://www.decapcms.org/docs/widgets/#relation) to define the relationship between blog posts and authors.
 
 ```yaml
 # updated fields in blog collection configuration
@@ -184,9 +203,9 @@ fields:
       name: 'author',
       widget: 'relation',
       collection: 'authors',
-      displayFields: [display_name],
-      searchFields: [display_name],
-      valueField: 'name',
+      display_fields: [display_name],
+      search_fields: [display_name],
+      value_field: 'name',
     }
   - { label: 'Body', name: 'body', widget: 'markdown' }
 ```
@@ -195,7 +214,7 @@ With that configuration added, you should be able to select the author for a pos
 
 ### About Page
 
-Our Jekyll blog includes an About page. It would nice to be able to edit that page just like we can edit our blog and author pages. Netlify CMS provides [file collections](https://www.netlifycms.org/docs/collection-types/#file-collections) to solve this problem.
+Our Jekyll blog includes an About page. It would nice to be able to edit that page just like we can edit our blog and author pages. Decap CMS provides [file collections](https://www.decapcms.org/docs/collection-types/#file-collections) to solve this problem.
 
 Copy and paste the following into the collections array in `config.yml`
 
@@ -210,13 +229,13 @@ Copy and paste the following into the collections array in `config.yml`
       file: 'about.md'
       fields:
         - { label: 'Title', name: 'title', widget: 'hidden', default: 'about' }
-        - { label: 'Layout', name: 'title', widget: 'hidden', default: 'about' }
+        - { label: 'Layout', name: 'layout', widget: 'hidden', default: 'about' }
         - { label: 'Body', name: 'body', widget: 'markdown' }
 ```
 
 ### Navigation
 
-The last aspect of our Jekyll blog we might want to bring under the control of Netlify CMS is our Navigation menu. Our Jekyll tutorial blog has a file `_data/navigation.yml` that defines the links rendered by `_includes/navigation.yml`. It looks like this.
+The last aspect of our Jekyll blog we might want to bring under the control of Decap CMS is our Navigation menu. Our Jekyll tutorial blog has a file `_data/navigation.yml` that defines the links rendered by `_includes/navigation.html`. It looks like this.
 
 ```yaml
 # _data/navigation.yml
@@ -230,7 +249,7 @@ The last aspect of our Jekyll blog we might want to bring under the control of N
   link: /staff.html
 ```
 
-To make this file editable with Netlify CMS, we'll need to make one minor tweak. The issue is this file contains a yaml array at the top level, but Netlify CMS is designed to work with yaml objects. Update `_data/navigation.yml` so it looks like so.
+To make this file editable with Decap CMS, we'll need to make one minor tweak. The issue is this file contains a yaml array at the top level, but Decap CMS is designed to work with yaml objects. Update `_data/navigation.yml` so it looks like so.
 
 ```yaml
 # _data/navigation.yml
@@ -260,23 +279,21 @@ You'll need to update `_includes/navigation.html` accordingly. `{% for item in s
 Finally, add the following to the collections array in `config.yml`
 
 ```yaml
-- name: "config"
-  label: "Config"
+- name: 'config'
+  label: 'Config'
   editor:
     preview: false
   files:
-    - label: "Navigation"
-      name: "navigation"
-      file: "_data/navigation.yml"
+    - label: 'Navigation'
+      name: 'navigation'
+      file: '_data/navigation.yml'
       fields:
-        - {
-            label: "Navigation Items",
-            name: "items",
-            widget: "list",
-            fields:
-              - {label: Name, name: name, widget: string}
-              - {label: Link, name: link, widget: string}
-          }
+        - label: 'Navigation Items'
+          name: 'items'
+          widget: 'list'
+          fields:
+            - { label: Name, name: name, widget: string }
+            - { label: Link, name: link, widget: string }
 ```
 
 Now you can add, rename, and rearrange the navigation items on your blog.

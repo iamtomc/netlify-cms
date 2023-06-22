@@ -1,9 +1,20 @@
-import { queryHelpers, waitForElement } from 'dom-testing-library';
 import cloudinary from '../index';
+
+jest.mock('netlify-cms-lib-util');
+
+describe('cloudinary exports', () => {
+  it('exports an object with expected properties', () => {
+    expect(cloudinary).toMatchInlineSnapshot(`
+  Object {
+    "init": [Function],
+    "name": "cloudinary",
+  }
+  `);
+  });
+});
 
 describe('cloudinary media library', () => {
   let mediaLibrary;
-  let cloudinaryScript;
   let cloudinaryConfig;
   let cloudinaryInsertHandler;
 
@@ -27,37 +38,16 @@ describe('cloudinary media library', () => {
       show: jest.fn(),
       hide: jest.fn(),
     };
+  });
 
-    /**
-     * We load the Cloudinary library by injecting a script tag to the page
-     * head. Initialization waits for the script to load, so here we fake it.
-     * This also tests that the expected script is added to the DOM.
-     */
-    waitForElement(() => {
-      const url = 'https://media-library.cloudinary.com/global/all.js';
-      return queryHelpers.queryByAttribute('src', document, url);
-    }).then(script => {
-      cloudinaryScript = script;
-      script.onreadystatechange();
-    });
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
-    /**
-     * Remove the script element from the dom after each test.
-     */
-    if (cloudinaryScript) {
-      document.head.removeChild(cloudinaryScript);
-    }
-  });
-
-  it('exports an object with expected properties', () => {
-    expect(cloudinary).toMatchInlineSnapshot(`
-Object {
-  "init": [Function],
-  "name": "cloudinary",
-}
-`);
+    const { loadScript } = require('netlify-cms-lib-util');
+    expect(loadScript).toHaveBeenCalledTimes(1);
+    expect(loadScript).toHaveBeenCalledWith('https://media-library.cloudinary.com/global/all.js');
   });
 
   describe('configuration', () => {
@@ -144,6 +134,17 @@ Object {
       };
       await cloudinary.init({ options, handleInsert });
       cloudinaryInsertHandler({ assets: [asset, asset] });
+      expect(handleInsert).toHaveBeenCalledWith(expect.any(Array));
+    });
+
+    it('calls insert function with array when only one asset is returned and config.multiple is true', async () => {
+      const options = {
+        config: {
+          multiple: true,
+        },
+      };
+      await cloudinary.init({ options, handleInsert });
+      cloudinaryInsertHandler({ assets: [asset] });
       expect(handleInsert).toHaveBeenCalledWith(expect.any(Array));
     });
 

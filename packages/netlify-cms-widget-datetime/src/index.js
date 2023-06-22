@@ -1,13 +1,16 @@
 import controlComponent from './DateTimeControl';
-import NetlifyCmsWidgetDate from 'netlify-cms-widget-date';
+import previewComponent from './DateTimePreview';
+import schema from './schema';
 
-const previewComponent = NetlifyCmsWidgetDate.previewComponent;
-const Widget = (opts = {}) => ({
-  name: 'datetime',
-  controlComponent,
-  previewComponent,
-  ...opts,
-});
+function Widget(opts = {}) {
+  return {
+    name: 'datetime',
+    controlComponent,
+    previewComponent,
+    schema,
+    ...opts,
+  };
+}
 
 export const NetlifyCmsWidgetDatetime = { Widget, controlComponent, previewComponent };
 export default NetlifyCmsWidgetDatetime;

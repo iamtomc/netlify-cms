@@ -2,10 +2,10 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import styled from '@emotion/styled';
-import Waypoint from 'react-waypoint';
+import { Waypoint } from 'react-waypoint';
 import { Map } from 'immutable';
-import { Cursor } from 'netlify-cms-lib-util';
-import { selectFields, selectInferedField } from 'Reducers/collections';
+
+import { selectFields, selectInferedField } from '../../../reducers/collections';
 import EntryCard from './EntryCard';
 
 const CardsGrid = styled.ul`
@@ -13,20 +13,23 @@ const CardsGrid = styled.ul`
   flex-flow: row wrap;
   list-style-type: none;
   margin-left: -12px;
+  margin-top: 16px;
+  margin-bottom: 16px;
 `;
 
 export default class EntryListing extends React.Component {
   static propTypes = {
-    publicFolder: PropTypes.string.isRequired,
     collections: ImmutablePropTypes.iterable.isRequired,
     entries: ImmutablePropTypes.list,
     viewStyle: PropTypes.string,
     cursor: PropTypes.any.isRequired,
     handleCursorActions: PropTypes.func.isRequired,
+    page: PropTypes.number,
   };
 
   hasMore = () => {
-    return Cursor.create(this.props.cursor).actions.has('append_next');
+    const hasMore = this.props.cursor?.actions?.has('append_next');
+    return hasMore;
   };
 
   handleLoadMore = () => {
@@ -47,26 +50,27 @@ export default class EntryListing extends React.Component {
   };
 
   renderCardsForSingleCollection = () => {
-    const { collections, entries, publicFolder, viewStyle } = this.props;
+    const { collections, entries, viewStyle } = this.props;
     const inferedFields = this.inferFields(collections);
-    const entryCardProps = { collection: collections, inferedFields, publicFolder, viewStyle };
+    const entryCardProps = { collection: collections, inferedFields, viewStyle };
     return entries.map((entry, idx) => <EntryCard {...entryCardProps} entry={entry} key={idx} />);
   };
 
   renderCardsForMultipleCollections = () => {
-    const { collections, entries, publicFolder } = this.props;
+    const { collections, entries } = this.props;
+    const isSingleCollectionInList = collections.size === 1;
     return entries.map((entry, idx) => {
       const collectionName = entry.get('collection');
       const collection = collections.find(coll => coll.get('name') === collectionName);
-      const collectionLabel = collection.get('label');
+      const collectionLabel = !isSingleCollectionInList && collection.get('label');
       const inferedFields = this.inferFields(collection);
-      const entryCardProps = { collection, entry, inferedFields, publicFolder, collectionLabel };
+      const entryCardProps = { collection, entry, inferedFields, collectionLabel };
       return <EntryCard {...entryCardProps} key={idx} />;
     });
   };
 
   render() {
-    const { collections } = this.props;
+    const { collections, page } = this.props;
 
     return (
       <div>
@@ -74,7 +78,7 @@ export default class EntryListing extends React.Component {
           {Map.isMap(collections)
             ? this.renderCardsForSingleCollection()
             : this.renderCardsForMultipleCollections()}
-          {this.hasMore() && <Waypoint onEnter={this.handleLoadMore} />}
+          {this.hasMore() && <Waypoint key={page} onEnter={this.handleLoadMore} />}
         </CardsGrid>
       </div>
     );

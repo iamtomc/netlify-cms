@@ -14,15 +14,16 @@ import {
   components,
   shadows,
 } from 'netlify-cms-ui-default';
-import { createNewEntry } from 'Actions/collections';
+
+import { createNewEntry } from '../../actions/collections';
 import {
   loadUnpublishedEntries,
   updateUnpublishedEntryStatus,
   publishUnpublishedEntry,
   deleteUnpublishedEntry,
-} from 'Actions/editorialWorkflow';
-import { selectUnpublishedEntriesByStatus } from 'Reducers';
-import { EDITORIAL_WORKFLOW, status } from 'Constants/publishModes';
+} from '../../actions/editorialWorkflow';
+import { selectUnpublishedEntriesByStatus } from '../../reducers';
+import { EDITORIAL_WORKFLOW, status } from '../../constants/publishModes';
 import WorkflowList from './WorkflowList';
 
 const WorkflowContainer = styled.div`
@@ -53,8 +54,9 @@ const WorkflowTopDescription = styled.p`
 
 class Workflow extends Component {
   static propTypes = {
-    collections: ImmutablePropTypes.orderedMap,
+    collections: ImmutablePropTypes.map.isRequired,
     isEditorialWorkflow: PropTypes.bool.isRequired,
+    isOpenAuthoring: PropTypes.bool,
     isFetching: PropTypes.bool,
     unpublishedEntries: ImmutablePropTypes.map,
     loadUnpublishedEntries: PropTypes.func.isRequired,
@@ -74,6 +76,7 @@ class Workflow extends Component {
   render() {
     const {
       isEditorialWorkflow,
+      isOpenAuthoring,
       isFetching,
       unpublishedEntries,
       updateUnpublishedEntryStatus,
@@ -116,7 +119,7 @@ class Workflow extends Component {
           <WorkflowTopDescription>
             {t('workflow.workflow.description', {
               smart_count: reviewCount,
-              readyCount: readyCount,
+              readyCount,
             })}
           </WorkflowTopDescription>
         </WorkflowTop>
@@ -125,6 +128,8 @@ class Workflow extends Component {
           handleChangeStatus={updateUnpublishedEntryStatus}
           handlePublish={publishUnpublishedEntry}
           handleDelete={deleteUnpublishedEntry}
+          isOpenAuthoring={isOpenAuthoring}
+          collections={collections}
         />
       </WorkflowContainer>
     );
@@ -132,9 +137,10 @@ class Workflow extends Component {
 }
 
 function mapStateToProps(state) {
-  const { collections } = state;
-  const isEditorialWorkflow = state.config.get('publish_mode') === EDITORIAL_WORKFLOW;
-  const returnObj = { collections, isEditorialWorkflow };
+  const { collections, config, globalUI } = state;
+  const isEditorialWorkflow = config.publish_mode === EDITORIAL_WORKFLOW;
+  const isOpenAuthoring = globalUI.useOpenAuthoring;
+  const returnObj = { collections, isEditorialWorkflow, isOpenAuthoring };
 
   if (isEditorialWorkflow) {
     returnObj.isFetching = state.editorialWorkflow.getIn(['pages', 'isFetching'], false);
@@ -152,12 +158,9 @@ function mapStateToProps(state) {
   return returnObj;
 }
 
-export default connect(
-  mapStateToProps,
-  {
-    loadUnpublishedEntries,
-    updateUnpublishedEntryStatus,
-    publishUnpublishedEntry,
-    deleteUnpublishedEntry,
-  },
-)(translate()(Workflow));
+export default connect(mapStateToProps, {
+  loadUnpublishedEntries,
+  updateUnpublishedEntryStatus,
+  publishUnpublishedEntry,
+  deleteUnpublishedEntry,
+})(translate()(Workflow));

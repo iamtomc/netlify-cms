@@ -1,15 +1,14 @@
 import unified from 'unified';
 import u from 'unist-builder';
+
 import remarkEscapeMarkdownEntities from '../remarkEscapeMarkdownEntities';
 
-const process = text => {
+function process(text) {
   const tree = u('root', [u('text', text)]);
-  const escapedMdast = unified()
-    .use(remarkEscapeMarkdownEntities)
-    .runSync(tree);
+  const escapedMdast = unified().use(remarkEscapeMarkdownEntities).runSync(tree);
 
   return escapedMdast.children[0].value;
-};
+}
 
 describe('remarkEscapeMarkdownEntities', () => {
   it('should escape common markdown entities', () => {
@@ -73,7 +72,13 @@ describe('remarkEscapeMarkdownEntities', () => {
     expect(process('a b <pre>*c*</pre> d e')).toEqual('a b <pre>*c*</pre> d e');
   });
 
-  it('should not parse footnotes', () => {
-    expect(process('[^a]')).toEqual('\\[^a]');
+  it('should not escape footnote references', () => {
+    expect(process('[^a]')).toEqual('[^a]');
+    expect(process('[^1]')).toEqual('[^1]');
+  });
+
+  it('should not escape footnotes', () => {
+    expect(process('[^a]:')).toEqual('[^a]:');
+    expect(process('[^1]:')).toEqual('[^1]:');
   });
 });
